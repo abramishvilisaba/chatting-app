@@ -14,6 +14,19 @@ const Main = () => {
     const [messagesSent, setMessagesSent] = useState(0);
 
     useEffect(() => {
+        const socket = io(process.env.REACT_APP_API_URL, {
+            extraHeaders: {
+                "session-id": 1,
+            },
+        });
+
+        return () => {
+            socket.disconnect();
+        };
+    }, []);
+
+    useEffect(() => {
+        console.log(process.env.REACT_APP_API_URL);
         const socketInstance = io(process.env.REACT_APP_API_URL);
         setSocket(socketInstance);
         console.log("load");

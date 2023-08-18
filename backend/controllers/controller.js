@@ -3,10 +3,9 @@ const http = require("http");
 const socketIo = require("socket.io");
 const cors = require("cors");
 const mysql = require("mysql2");
-// require("dotenv").config({ path: "./.env" });
+const session = require("express-session");
 
-const app = express();
-const server = http.createServer(app);
+// require("dotenv").config({ path: "./.env" });
 
 const db = mysql.createPool({
     host: process.env.DB_HOST,
@@ -15,9 +14,12 @@ const db = mysql.createPool({
     database: process.env.DB_DATABASE,
     waitForConnections: true,
     connectionLimit: parseInt(process.env.DB_CONNECTION_LIMIT),
-    queueLimit: 0,
+    queueLimit: 5,
 });
 console.log(process.env.ALLOWED_ORIGIN);
+
+const app = express();
+const server = http.createServer(app);
 
 const corsOptions = {
     origin: process.env.ALLOWED_ORIGIN,
@@ -27,9 +29,24 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
+// app.use(cors());
+
 const io = socketIo(server, {
     cors: corsOptions,
 });
+
+// const io = socketIo(server);
+
+io.use((socket, next) => {
+    sessionMiddleware(socket.request, socket.request.res, next);
+});
+
+const sessionMiddleware = session({
+    secret: "my-key",
+    resave: false,
+    saveUninitialized: true,
+});
+app.use(sessionMiddleware);
 
 db.getConnection((err, connection) => {
     if (err) {
@@ -60,7 +77,7 @@ io.on("connection", (socket) => {
             console.error("Error fetching messages:", err);
             return;
         }
-        console.log(results);
+        // console.log(results);
 
         socket.emit("initial messages", results);
     });
@@ -103,6 +120,7 @@ io.on("connection", (socket) => {
     });
 });
 
-server.listen(3001, () => {
-    console.log("Server is listening on port 3001");
+const PORT = process.env.PORT || 3001;
+server.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
 });
