@@ -1,0 +1,8 @@
+
+CREATE TABLE messages (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user VARCHAR(255) NOT NULL,
+  message TEXT NOT NULL,
+  tags JSON,
+  timestamp DATETIME NOT NULL
+);
