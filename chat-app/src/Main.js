@@ -19,7 +19,6 @@ const Main = () => {
                 "session-id": 1,
             },
         });
-
         return () => {
             socket.disconnect();
         };
@@ -34,22 +33,11 @@ const Main = () => {
             console.log(messagesData);
             setMessages(messagesData);
         });
-
-        // return () => {
-        //     if (socketInstance) {
-        //         socketInstance.disconnect();
-        //     }
-        // };
     }, [messagesSent]);
 
     useEffect(() => {
         const socketInstance = io(process.env.REACT_APP_API_URL);
         setSocket(socketInstance);
-
-        // socketInstance.on("chat message", (messageData) => {
-        //     setMessages((prevMessages) => [...prevMessages, messageData]);
-        // });
-
         return () => {
             if (socketInstance) {
                 socketInstance.disconnect();
@@ -57,20 +45,7 @@ const Main = () => {
         };
     }, []);
 
-    // useEffect(() => {
-    //     const newTags = filterTags.filter((tag) => tag !== "" && !enabledTags.includes(tag));
-    //     console.log(newTags, newTags.length);
-    //     if (newTags.length > 0) {
-    //         setEnabledTags([...enabledTags, ...newTags]);
-    //     }
-    // }, [filterTags, enabledTags]);
-
     useEffect(() => {
-        // const newTags = filterTags.filter((tag) => tag !== "" && !enabledTags.includes(tag));
-        // console.log(newTags, newTags.length);
-        // if (newTags.length > 0) {
-        //     setEnabledTags([...enabledTags, ...newTags]);
-        // }
         console.log("set");
         const uniqueTagsArray = _.uniq(_.flatMap(messages, "tags"));
         const nonEmptyTags = uniqueTagsArray.filter((tag) => tag !== null && tag !== "");
@@ -114,14 +89,6 @@ const Main = () => {
         console.log("filteredMessages = ", filteredMessages);
     }, [messages, filterTags]);
 
-    // setFilteredMessages = messages.filter((msg) => {
-    //     console.log(msg.tags);
-    //     if (msg.tags.length === 0) {
-    //         return true;
-    //     }
-    //     return msg.tags.some((tag) => filterTags.includes(tag)) || msg.tags.length === 0;
-    // });
-
     const getSuggestions = (value) => {
         const inputValue = value.trim().toLowerCase();
         const inputLength = inputValue.length;
@@ -158,15 +125,7 @@ const Main = () => {
                         </button>
                     ))}
                 </div>
-                {/* <div className="flex flex-row h-1/6 items-end">
-                    <input
-                        type="text"
-                        value={filterTags.join(",")}
-                        onChange={(e) => setFilterTags(e.target.value.split(","))}
-                        className="border rounded w-full p-2 "
-                        placeholder="Enter tags (comma-separated)"
-                    />
-                </div> */}
+
                 <div className="flex flex-row h-1/6 items-end">
                     <Autosuggest
                         suggestions={getSuggestions(filterTags.join(","))}

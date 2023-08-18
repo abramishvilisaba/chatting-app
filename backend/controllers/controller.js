@@ -57,18 +57,6 @@ db.getConnection((err, connection) => {
     connection.release();
 });
 
-// io.on("connection", (socket) => {
-//     console.log("A user connected");
-
-//     db.query("SELECT * FROM messages ORDER BY timestamp ASC", (err, results) => {
-//         if (err) {
-//             console.error("Error fetching messages:", err);
-//             return;
-//         }
-//         socket.emit("initial messages", results);
-//     });
-// });
-
 io.on("connection", (socket) => {
     console.log("A user connected");
 
@@ -110,8 +98,8 @@ io.on("connection", (socket) => {
                 tags,
                 timestamp,
             };
-            io.emit("chat message", insertedMessage); // Emit the message to all connected clients
-            socket.emit("chat message", insertedMessage); // Emit the message to the sender only
+            io.emit("chat message", insertedMessage);
+            socket.emit("chat message", insertedMessage);
         });
     });
 
