@@ -3,7 +3,7 @@ const http = require("http");
 const socketIo = require("socket.io");
 const cors = require("cors");
 const mysql = require("mysql2");
-require("dotenv").config({ path: "./.env" });
+// require("dotenv").config({ path: "./.env" });
 
 const app = express();
 const server = http.createServer(app);
