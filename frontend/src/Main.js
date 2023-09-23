@@ -139,7 +139,15 @@ const Main = () => {
             }}
         >
             {connected ? (
-                <Grid container sx={{ height: "70vh", width: "60%", mx: "auto" }} spacing={2}>
+                <Grid
+                    container
+                    sx={{
+                        height: "70vh",
+                        width: { xs: "100%", sm: "80%", md: "70%", lg: "60%" },
+                        mx: { xs: "0", sm: "10%", md: "15%", lg: "20%" },
+                    }}
+                    spacing={{ sm: 1, md: 2 }}
+                >
                     <Grid item xs={4}>
                         <Paper
                             sx={{
@@ -147,7 +155,7 @@ const Main = () => {
                                 display: "flex",
                                 flexDirection: "column",
                                 justifyContent: "space-between",
-                                p: 4,
+                                p: { xs: 1, md: 2, lg: 4 },
                                 flexGrow: 1,
                             }}
                         >
@@ -208,7 +216,7 @@ const Main = () => {
                                 display: "flex",
                                 flexDirection: "column",
                                 justifyContent: "space-between",
-                                p: 4,
+                                p: { xs: 1, md: 2, lg: 4 },
                                 flexGrow: 3,
                             }}
                         >
