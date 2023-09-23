@@ -63,8 +63,8 @@ const Main = () => {
         });
 
         socketInstance.on("chat message", (messagesData) => {
-            console.log(messagesData);
-            setMessages([...messages, messagesData]);
+            console.log("chat message");
+            setMessages((prevMessages) => [...prevMessages, messagesData]);
         });
 
         return () => {
