@@ -4,19 +4,7 @@ const socketIo = require("socket.io");
 const cors = require("cors");
 const mysql = require("mysql2");
 const session = require("express-session");
-
-// require("dotenv").config({ path: "./.env" });
-
-const db = mysql.createPool({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_DATABASE,
-    waitForConnections: true,
-    connectionLimit: parseInt(process.env.DB_CONNECTION_LIMIT),
-    queueLimit: 5,
-});
-console.log(process.env.ALLOWED_ORIGIN);
+const { Message } = require("../models/index.js");
 
 const app = express();
 const server = http.createServer(app);
@@ -29,13 +17,9 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// app.use(cors());
-
 const io = socketIo(server, {
     cors: corsOptions,
 });
-
-// const io = socketIo(server);
 
 io.use((socket, next) => {
     sessionMiddleware(socket.request, socket.request.res, next);
@@ -48,59 +32,37 @@ const sessionMiddleware = session({
 });
 app.use(sessionMiddleware);
 
-db.getConnection((err, connection) => {
-    if (err) {
-        console.error("MySQL connection error:", err);
-        return;
-    }
-    console.log("Connected to MySQL database");
-    connection.release();
-});
-
 io.on("connection", (socket) => {
     console.log("A user connected");
 
-    db.query("SELECT * FROM messages ORDER BY timestamp ASC", (err, results) => {
-        if (err) {
+    Message.findAll({
+        order: [["timestamp", "ASC"]],
+    })
+        .then((results) => {
+            socket.emit("initial messages", results);
+        })
+        .catch((err) => {
             console.error("Error fetching messages:", err);
-            return;
-        }
-        // console.log(results);
-
-        socket.emit("initial messages", results);
-    });
+        });
 
     socket.on("chat message", (data) => {
         console.log("chat message", data);
         const { message, messageTags } = data;
-        let tags = messageTags;
+        const tagsArray = Array.isArray(messageTags) ? messageTags : [];
         const timestamp = new Date();
-        const tagsArray = Array.isArray(tags) ? tags : [];
-        const tagsString =
-            tagsArray.length > 0 && JSON.stringify(tagsArray).length > 4
-                ? JSON.stringify(tagsArray)
-                : null;
 
-        console.log("tagsArray", tagsArray);
-        console.log(tagsArray.length);
-        console.log(JSON.stringify(tagsArray).length);
-        console.log(tagsString);
-
-        const insertQuery = "INSERT INTO messages (message, tags, timestamp) VALUES (?, ?, ?)";
-        db.query(insertQuery, [message, tagsString, timestamp], (err, results) => {
-            if (err) {
+        Message.create({
+            message,
+            tags: tagsArray,
+            timestamp,
+        })
+            .then((insertedMessage) => {
+                io.emit("chat message", insertedMessage);
+                socket.emit("chat message", insertedMessage);
+            })
+            .catch((err) => {
                 console.error("Error inserting message:", err);
-                return;
-            }
-            const insertedMessage = {
-                id: results.insertId,
-                message,
-                tags,
-                timestamp,
-            };
-            io.emit("chat message", insertedMessage);
-            socket.emit("chat message", insertedMessage);
-        });
+            });
     });
 
     socket.on("disconnect", () => {
