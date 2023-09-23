@@ -1,6 +1,15 @@
 import React, { useRef, useState, useEffect } from "react";
 import io from "socket.io-client";
-import { Button, TextField, Autocomplete, Box, Typography, Paper, Grid } from "@mui/material";
+import {
+    Button,
+    TextField,
+    Autocomplete,
+    Box,
+    Typography,
+    Paper,
+    Grid,
+    CircularProgress,
+} from "@mui/material";
 import { useTheme, ThemeProvider, createTheme } from "@mui/material/styles";
 import _ from "lodash";
 import SendIcon from "@mui/icons-material/Send";
@@ -16,9 +25,36 @@ const Main = () => {
     const [messages, setMessages] = useState([]);
     const [filteredMessages, setFilteredMessages] = useState([]);
     const [messagesSent, setMessagesSent] = useState(0);
+    const [connected, setConnected] = useState(false);
+    const [retryCount, setRetryCount] = useState(0);
+    const maxRetries = 30;
+    const retryInterval = 5000;
+
+    const API_URL = process.env.REACT_APP_API_URL;
 
     useEffect(() => {
-        const socketInstance = io(process.env.REACT_APP_API_URL);
+        console.log("trying to connect :", retryCount);
+        async function pingServer() {
+            try {
+                const response = await fetch(`${API_URL}/ping`);
+                if (response.ok) {
+                    setConnected(true);
+                }
+            } catch (error) {
+                console.error("Error while pinging the server:", error);
+                if (retryCount < maxRetries) {
+                    setTimeout(() => {
+                        setRetryCount(retryCount + 1);
+                        // pingServer();
+                    }, retryInterval);
+                }
+            }
+        }
+        pingServer();
+    }, [retryCount]);
+
+    useEffect(() => {
+        const socketInstance = io(API_URL);
         setSocket(socketInstance);
 
         socketInstance.on("initial messages", (messagesData) => {
@@ -37,7 +73,7 @@ const Main = () => {
     }, [messagesSent]);
 
     const handleSendMessage = () => {
-        const socketInstance = io(process.env.REACT_APP_API_URL);
+        const socketInstance = io(API_URL);
         setSocket(socketInstance);
 
         if (socket && message.trim() !== "") {
@@ -86,21 +122,6 @@ const Main = () => {
         handleSendMessage();
     };
 
-    // const getSuggestions = (value) => {
-    //     const inputValue = value.trim().toLowerCase();
-    //     const inputLength = inputValue.length;
-
-    //     return inputLength === 0
-    //         ? []
-    //         : enabledTags.filter((tag) => tag.toLowerCase().slice(0, inputLength) === inputValue);
-    // };
-
-    // console.log("messageTags", messageTags);
-    // console.log("filterTags", filterTags);
-    // console.log("enabledTags", enabledTags);
-    // console.log("messages", messages);
-    // console.log("filteredMessages", filteredMessages);
-
     const messageListRef = useRef(null);
     useEffect(() => {
         if (messageListRef.current) {
@@ -117,156 +138,170 @@ const Main = () => {
                 mb: "10%",
             }}
         >
-            <Grid container sx={{ height: "70vh", width: "60%", mx: "auto" }} spacing={2}>
-                <Grid item xs={4}>
-                    <Paper
-                        sx={{
-                            height: "100%",
-                            display: "flex",
-                            flexDirection: "column",
-                            justifyContent: "space-between",
-                            p: 4,
-                            flexGrow: 1,
-                        }}
-                    >
-                        <Typography variant="h5" mb={2}>
-                            Tags
-                        </Typography>
-                        <Box
+            {connected ? (
+                <Grid container sx={{ height: "70vh", width: "60%", mx: "auto" }} spacing={2}>
+                    <Grid item xs={4}>
+                        <Paper
                             sx={{
                                 height: "100%",
                                 display: "flex",
-                                flexDirection: "row",
-                                gap: 1.5,
-                                // flexGrow: 4,
-                                alignContent: "start",
-                                justifyContent: "start",
-                                alignItems: "start",
-                                flexWrap: "wrap",
+                                flexDirection: "column",
+                                justifyContent: "space-between",
+                                p: 4,
+                                flexGrow: 1,
                             }}
                         >
-                            {filterTags.map((filterTag, i) => (
-                                <Button
-                                    key={i}
-                                    variant="outlined"
-                                    onClick={() => toggleTag(filterTag)}
-                                    sx={{
-                                        width: "fit",
-                                        minWidth: "20%",
-                                        height: "40px",
-                                        textAlign: "center",
-                                    }}
-                                >
-                                    {filterTag}
-                                </Button>
-                            ))}
-                        </Box>
-                        <Autocomplete
-                            multiple
-                            id="tags"
-                            options={enabledTags}
-                            value={filterTags}
-                            onChange={(e, newValue) => setFilterTags(newValue)}
-                            freeSolo
-                            renderInput={(params) => (
-                                <TextField
-                                    {...params}
-                                    variant="outlined"
-                                    label="Enter tags"
-                                    placeholder="Tags"
-                                />
-                            )}
-                        />
-                    </Paper>
-                </Grid>
-                <Grid item xs={8}>
-                    <Paper
-                        sx={{
-                            height: "100%",
-                            display: "flex",
-                            flexDirection: "column",
-                            justifyContent: "space-between",
-                            p: 4,
-                            flexGrow: 3,
-                        }}
-                    >
-                        <Typography variant="h4">Chat App</Typography>
-                        <Box
-                            ref={messageListRef}
-                            sx={{
-                                flexGrow: 4,
-                                pb: 0,
-                                my: 1,
-                                overflow: "auto",
-                                height: "500px",
-                            }}
-                        >
-                            <ul style={{ listStyle: "none", padding: 0 }}>
-                                {filteredMessages
-                                    ? filteredMessages.map((msg) => (
-                                          <li key={msg.id}>
-                                              <Typography variant="h6">
-                                                  {msg.message}{" "}
-                                                  {msg.tags.length > 0 && (
-                                                      <span> ' {msg.tags.join(", ")} '</span>
-                                                  )}
-                                              </Typography>
-                                          </li>
-                                      ))
-                                    : null}
-                            </ul>
-                        </Box>
-                        <Grid container spacing={2} alignItems="end">
-                            <Grid item xs={7}>
-                                <form onSubmit={handleFormSubmit}>
-                                    <TextField
-                                        type="text"
-                                        value={message}
-                                        onChange={(e) => setMessage(e.target.value)}
+                            <Typography variant="h5" mb={2}>
+                                Tags
+                            </Typography>
+                            <Box
+                                sx={{
+                                    height: "100%",
+                                    display: "flex",
+                                    flexDirection: "row",
+                                    gap: 1.5,
+                                    // flexGrow: 4,
+                                    alignContent: "start",
+                                    justifyContent: "start",
+                                    alignItems: "start",
+                                    flexWrap: "wrap",
+                                }}
+                            >
+                                {filterTags.map((filterTag, i) => (
+                                    <Button
+                                        key={i}
                                         variant="outlined"
-                                        label="Enter your message"
-                                        fullWidth
-                                        size="normal"
-                                        color="primary"
+                                        onClick={() => toggleTag(filterTag)}
+                                        sx={{
+                                            width: "fit",
+                                            minWidth: "20%",
+                                            height: "40px",
+                                            textAlign: "center",
+                                        }}
+                                    >
+                                        {filterTag}
+                                    </Button>
+                                ))}
+                            </Box>
+                            <Autocomplete
+                                multiple
+                                id="tags"
+                                options={enabledTags}
+                                value={filterTags}
+                                onChange={(e, newValue) => setFilterTags(newValue)}
+                                freeSolo
+                                renderInput={(params) => (
+                                    <TextField
+                                        {...params}
+                                        variant="outlined"
+                                        label="Enter tags"
+                                        placeholder="Tags"
                                     />
-                                </form>
-                            </Grid>
-                            <Grid item xs={4}>
-                                <Autocomplete
-                                    multiple
-                                    id="message-tags"
-                                    options={enabledTags}
-                                    value={messageTags}
-                                    onChange={(e, newValue) => setmessageTags(newValue)}
-                                    freeSolo
-                                    renderInput={(params) => (
+                                )}
+                            />
+                        </Paper>
+                    </Grid>
+                    <Grid item xs={8}>
+                        <Paper
+                            sx={{
+                                height: "100%",
+                                display: "flex",
+                                flexDirection: "column",
+                                justifyContent: "space-between",
+                                p: 4,
+                                flexGrow: 3,
+                            }}
+                        >
+                            <Typography variant="h4">Chat App</Typography>
+                            <Box
+                                ref={messageListRef}
+                                sx={{
+                                    flexGrow: 4,
+                                    pb: 0,
+                                    my: 1,
+                                    overflow: "auto",
+                                    height: "500px",
+                                }}
+                            >
+                                <ul style={{ listStyle: "none", padding: 0 }}>
+                                    {filteredMessages
+                                        ? filteredMessages.map((msg) => (
+                                              <li key={msg.id}>
+                                                  <Typography variant="h6">
+                                                      {msg.message}{" "}
+                                                      {msg.tags.length > 0 && (
+                                                          <span> ' {msg.tags.join(", ")} '</span>
+                                                      )}
+                                                  </Typography>
+                                              </li>
+                                          ))
+                                        : null}
+                                </ul>
+                            </Box>
+                            <Grid container spacing={2} alignItems="end">
+                                <Grid item xs={7}>
+                                    <form onSubmit={handleFormSubmit}>
                                         <TextField
-                                            {...params}
+                                            type="text"
+                                            value={message}
+                                            onChange={(e) => setMessage(e.target.value)}
                                             variant="outlined"
-                                            label="Enter tags"
-                                            placeholder="Tags"
+                                            label="Enter your message"
                                             fullWidth
                                             size="normal"
+                                            color="primary"
                                         />
-                                    )}
-                                />
+                                    </form>
+                                </Grid>
+                                <Grid item xs={4}>
+                                    <Autocomplete
+                                        multiple
+                                        id="message-tags"
+                                        options={enabledTags}
+                                        value={messageTags}
+                                        onChange={(e, newValue) => setmessageTags(newValue)}
+                                        freeSolo
+                                        renderInput={(params) => (
+                                            <TextField
+                                                {...params}
+                                                variant="outlined"
+                                                label="Enter tags"
+                                                placeholder="Tags"
+                                                fullWidth
+                                                size="normal"
+                                            />
+                                        )}
+                                    />
+                                </Grid>
+                                <Grid
+                                    item
+                                    xs={1}
+                                    sx={{ height: "100%", alignItems: "center", display: "flex" }}
+                                >
+                                    <SendIcon
+                                        fontSize="large"
+                                        onClick={handleSendMessage}
+                                        color="primary"
+                                        sx={{ cursor: "pointer" }}
+                                    />
+                                </Grid>
                             </Grid>
-                            <Grid
-                                item
-                                xs={1}
-                                sx={{ height: "100%", alignItems: "center", display: "flex" }}
-                            >
-                                <SendIcon
-                                    fontSize="large"
-                                    onClick={handleSendMessage}
-                                    color="primary"
-                                    sx={{ cursor: "pointer" }}
-                                />
-                            </Grid>
-                        </Grid>
-                    </Paper>
+                        </Paper>
+                    </Grid>{" "}
                 </Grid>
-            </Grid>
+            ) : (
+                <Box
+                    fullWidth
+                    sx={{
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        height: "40vh",
+                    }}
+                >
+                    <CircularProgress sx={{ textAlign: "center" }} />
+                </Box>
+            )}
         </Box>
     );
 };

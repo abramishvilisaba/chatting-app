@@ -32,6 +32,14 @@ const sessionMiddleware = session({
 });
 app.use(sessionMiddleware);
 
+app.get("/ping", async (req, res) => {
+    try {
+        res.status(200).json({ message: "Connected" });
+    } catch (error) {
+        console.log(error);
+    }
+});
+
 io.on("connection", (socket) => {
     console.log("A user connected");
 
